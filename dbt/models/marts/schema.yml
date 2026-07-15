@@ -1,0 +1,135 @@
+version: 2
+
+models:
+  - name: mart_revenue_trends
+    description: >
+      Revenue overview page. Grain (revenue_month, region). Full MRR movement
+      bridge -- new, expansion, contraction, churned -- plus ARR, add-on
+      revenue, active customers and month-over-month MRR growth per region.
+      Bridge identity: mrr = previous mrr + net_new_mrr (per region).
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [revenue_month, region]
+    columns:
+      - name: revenue_month
+        description: Calendar month.
+        tests: [not_null]
+      - name: region
+        description: Sales region.
+        tests: [not_null]
+      - name: active_customers
+        description: Customers billed a recurring invoice this month.
+      - name: mrr
+        description: Total monthly recurring revenue.
+        tests: [not_null]
+      - name: arr
+        description: Annualized recurring revenue (MRR x 12).
+      - name: addon_revenue
+        description: One-off add-on revenue this month.
+      - name: new_mrr
+        description: MRR from customers in their first billed month.
+      - name: expansion_mrr
+        description: MRR gained from existing customers billing more than last month.
+      - name: contraction_mrr
+        description: MRR lost from existing customers billing less (still active). Positive number.
+      - name: churned_mrr
+        description: MRR of customers whose last billed month was the prior month. Positive number.
+      - name: churned_customers
+        description: Customers counted in churned_mrr.
+      - name: net_new_mrr
+        description: new + expansion - contraction - churned.
+      - name: mom_mrr_growth
+        description: Month-over-month MRR growth rate within the region.
+
+  - name: mart_churn_analysis
+    description: >
+      Churn analysis page. Grain (churn_month, plan_tier, churn_reason).
+      customers_at_start / mrr_at_start repeat across reason rows within a
+      (month, tier) -- aggregate reasons away before computing churn rates.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [churn_month, plan_tier, churn_reason]
+    columns:
+      - name: churn_month
+        description: Month the customers churned.
+        tests: [not_null]
+      - name: plan_tier
+        description: Plan tier at churn.
+        tests: [not_null]
+      - name: churn_reason
+        description: Stated churn reason.
+        tests: [not_null]
+      - name: churned_customers
+        description: Customers churning this month / tier / reason.
+      - name: churned_mrr
+        description: Their combined MRR at churn.
+      - name: customers_at_start
+        description: Customers on the tier at the start of the month (billed in the prior month). Repeats across reason rows.
+      - name: mrr_at_start
+        description: Their combined MRR. Repeats across reason rows.
+
+  - name: mart_cohort_retention
+    description: >
+      Cohort retention page. Grain (cohort_month, months_since_signup). Logo
+      retention and MRR retention (cohort-level NRR) for every signup cohort.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [cohort_month, months_since_signup]
+    columns:
+      - name: cohort_month
+        description: Signup month of the cohort.
+        tests: [not_null]
+      - name: months_since_signup
+        description: Whole months since signup (0 = signup month).
+        tests: [not_null]
+      - name: cohort_size
+        description: Customers billed in the cohort's month 0.
+      - name: active_customers
+        description: Cohort customers still billing at this age.
+      - name: retention_rate
+        description: active_customers / cohort_size (logo retention).
+      - name: retained_mrr
+        description: Cohort MRR at this age.
+      - name: mrr_retention_rate
+        description: retained_mrr / cohort month-0 MRR. Can exceed 1 when survivor expansion outpaces churn.
+
+  - name: mart_plan_performance
+    description: >
+      Plan performance page. Grain (revenue_month, plan_tier). ARPU, 12-month
+      NRR, monthly and trailing-12m churn rates, realized CLV of the month's
+      churned customers, and predictive CLV (ARPU / trailing churn rate).
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [revenue_month, plan_tier]
+    columns:
+      - name: revenue_month
+        description: Calendar month.
+        tests: [not_null]
+      - name: plan_tier
+        description: Plan tier billed (historical, from invoices).
+        tests: [not_null]
+      - name: active_customers
+        description: Customers billed on the tier this month.
+      - name: mrr
+        description: Tier MRR this month.
+      - name: arpu
+        description: Average revenue per user (mrr / active_customers).
+      - name: customers_at_start
+        description: Tier customers billed in the prior month.
+      - name: mrr_12m_ago
+        description: MRR 12 months ago of the customers then on this tier.
+      - name: nrr_12m
+        description: >
+          12-month net revenue retention: today's MRR of the customers who
+          were on the tier 12 months ago (churned = 0, expansion in full, new
+          logos excluded) divided by their MRR then.
+      - name: churned_customers
+        description: Tier customers churning this month.
+      - name: avg_realized_clv
+        description: Average lifetime revenue of this month's churned customers.
+      - name: monthly_churn_rate
+        description: churned_customers / customers_at_start.
+      - name: trailing_12m_churn_rate
+        description: Trailing 12-month average of monthly_churn_rate.
+      - name: predictive_clv
+        description: ARPU / trailing_12m_churn_rate.
