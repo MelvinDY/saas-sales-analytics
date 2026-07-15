@@ -1,0 +1,20 @@
+name: saas_sales_analytics
+version: "1.0.0"
+profile: saas_sales_analytics
+
+model-paths: ["models"]
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+vars:
+  # observation cutoff of the raw extract; keeps "still active" logic stable
+  as_of_date: "2026-06-30"
+
+models:
+  saas_sales_analytics:
+    staging:
+      +materialized: view
+    intermediate:
+      +materialized: table
+    marts:
+      +materialized: table

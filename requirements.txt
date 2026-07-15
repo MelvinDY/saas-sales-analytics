@@ -1,0 +1,2 @@
+dbt-duckdb>=1.9
+# cloud path (optional): dbt-bigquery, google-cloud-bigquery, pandas

@@ -1,0 +1,62 @@
+version: 2
+
+sources:
+  - name: raw
+    description: >
+      Immutable raw extracts in data/raw/. Under the DuckDB dev target they
+      are read straight from CSV via external_location; under BigQuery they
+      are the tables created by ingest/load_to_bigquery.py in the `raw`
+      dataset. Raw data is never modified downstream.
+    schema: raw
+    tables:
+      - name: saas_transactions
+        description: >
+          B2B SaaS order lines: one row per order. Monthly recurring plan
+          invoices plus one-off add-on products (onboarding, support,
+          integrations).
+        meta:
+          external_location: "read_csv_auto('../data/raw/saas_transactions.csv', header=true)"
+        columns:
+          - name: order_id
+            description: Order line identifier (primary key).
+            tests: [unique, not_null]
+          - name: order_date
+            description: Date the order was billed.
+            tests: [not_null]
+          - name: customer_id
+            description: Customer the order belongs to.
+            tests: [not_null]
+          - name: product
+            description: Product name; recurring plans end in "Plan Subscription".
+          - name: sales
+            description: Billed amount (USD).
+          - name: profit
+            description: Gross profit on the line (USD).
+          - name: region
+            description: Sales region (APAC / AMER / EMEA).
+
+      - name: subscriptions
+        description: >
+          Subscription lifecycle snapshot: one row per customer as of the
+          extract date. `mrr` is the latest monthly rate (current, or at
+          churn for churned customers).
+        meta:
+          external_location: "read_csv_auto('../data/raw/subscriptions.csv', header=true)"
+        columns:
+          - name: customer_id
+            description: Customer identifier (primary key).
+            tests: [unique, not_null]
+          - name: plan_tier
+            description: Latest plan tier (Basic / Pro / Enterprise).
+            tests: [not_null]
+          - name: mrr
+            description: Latest monthly recurring revenue (USD).
+          - name: subscription_start
+            description: Signup date.
+            tests: [not_null]
+          - name: churn_date
+            description: Date the customer churned; null if still active.
+          - name: churn_reason
+            description: Stated churn reason; null if still active.
+          - name: country
+            description: Customer country.

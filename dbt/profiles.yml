@@ -1,0 +1,19 @@
+# Two targets, same models:
+#   dev      - local DuckDB file, zero cost, no credentials (default)
+#   bigquery - the cloud path from the project plan; needs a GCP service
+#              account. Load raw data first with ingest/load_to_bigquery.py.
+saas_sales_analytics:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: ../data/warehouse.duckdb
+      threads: 4
+    bigquery:
+      type: bigquery
+      method: service-account
+      project: "{{ env_var('GCP_PROJECT', 'set-GCP_PROJECT') }}"
+      dataset: saas_analytics
+      keyfile: "{{ env_var('GOOGLE_APPLICATION_CREDENTIALS', 'set-GOOGLE_APPLICATION_CREDENTIALS') }}"
+      location: US
+      threads: 4

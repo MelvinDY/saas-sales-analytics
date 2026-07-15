@@ -1,0 +1,84 @@
+version: 2
+
+models:
+  - name: int_customer_monthly_revenue
+    description: >
+      Customer x active-month spine; the base for MRR, the movement bridge,
+      NRR and cohort retention. A customer is active in a month iff a
+      recurring invoice was billed that month.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [customer_id, revenue_month]
+    columns:
+      - name: customer_id
+        description: Customer identifier.
+        tests: [not_null]
+      - name: revenue_month
+        description: Billing month (first of month).
+        tests: [not_null]
+      - name: region
+        description: Sales region billed that month.
+      - name: plan_tier
+        description: Plan tier billed that month (historical, from the invoice).
+        tests: [not_null]
+      - name: country
+        description: Customer country.
+      - name: cohort_month
+        description: Customer signup month.
+      - name: months_since_signup
+        description: Whole months between signup month and this billing month.
+        tests: [not_null]
+      - name: recurring_mrr
+        description: Recurring plan revenue billed this month (the customer's MRR).
+        tests: [not_null]
+      - name: addon_revenue
+        description: One-off add-on revenue billed this month.
+      - name: total_revenue
+        description: All revenue billed this month.
+      - name: total_profit
+        description: Gross profit this month.
+
+  - name: int_customer_revenue
+    description: >
+      Enriched customer grain: subscription lifecycle joined to lifetime
+      transaction aggregates with derived lifecycle fields.
+    columns:
+      - name: customer_id
+        description: Customer identifier.
+        tests: [unique, not_null]
+      - name: plan_tier
+        description: Latest plan tier.
+      - name: country
+        description: Customer country.
+      - name: latest_mrr
+        description: Latest monthly recurring revenue.
+      - name: subscription_start
+        description: Signup date.
+      - name: cohort_month
+        description: Signup month.
+      - name: churn_date
+        description: Churn date; null while active.
+      - name: churn_reason
+        description: Stated churn reason; null while active.
+      - name: is_churned
+        description: True if churned.
+      - name: subscription_length_days
+        description: Days from signup to churn, or to the as_of_date while active.
+      - name: first_order_date
+        description: First billed order date.
+      - name: last_order_date
+        description: Most recent billed order date.
+      - name: order_count
+        description: Lifetime order lines.
+      - name: months_active
+        description: Distinct months with a recurring invoice.
+      - name: lifetime_revenue
+        description: Lifetime billed revenue (realized CLV once churned).
+      - name: lifetime_profit
+        description: Lifetime gross profit.
+      - name: recurring_revenue
+        description: Lifetime recurring plan revenue.
+      - name: addon_revenue
+        description: Lifetime one-off add-on revenue.
+      - name: revenue_per_month
+        description: Lifetime revenue divided by months active.

@@ -1,0 +1,77 @@
+version: 2
+
+models:
+  - name: stg_saas_transactions
+    description: >
+      One row per order line, typed and cleaned. Recurring plan invoices are
+      flagged and their plan tier recovered from the product name, giving
+      downstream models historical tier per billing month.
+    columns:
+      - name: order_id
+        description: Order line identifier.
+        tests: [unique, not_null]
+      - name: order_date
+        description: Billing date.
+        tests: [not_null]
+      - name: order_month
+        description: Billing month (first of month).
+      - name: customer_id
+        description: Customer the order belongs to.
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_subscriptions')
+              field: customer_id
+      - name: product
+        description: Product name.
+      - name: is_recurring
+        description: True for monthly plan invoices, false for one-off add-ons.
+      - name: billed_plan_tier
+        description: Plan tier billed this order (recurring lines only).
+        tests:
+          - accepted_values:
+              values: ["Basic", "Pro", "Enterprise"]
+              config:
+                where: "is_recurring"
+      - name: sales
+        description: Billed amount (USD).
+        tests: [not_null]
+      - name: profit
+        description: Gross profit (USD).
+      - name: region
+        description: Sales region.
+        tests:
+          - accepted_values:
+              values: ["APAC", "AMER", "EMEA"]
+
+  - name: stg_subscriptions
+    description: >
+      One row per customer: lifecycle snapshot with standardised tier values
+      and typed dates. `latest_mrr` is the monthly rate as of the extract
+      (or at churn).
+    columns:
+      - name: customer_id
+        description: Customer identifier.
+        tests: [unique, not_null]
+      - name: plan_tier
+        description: Latest plan tier.
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["Basic", "Pro", "Enterprise"]
+      - name: latest_mrr
+        description: Latest monthly recurring revenue (USD).
+        tests: [not_null]
+      - name: subscription_start
+        description: Signup date.
+        tests: [not_null]
+      - name: cohort_month
+        description: Signup month (first of month).
+      - name: churn_date
+        description: Churn date; null while active.
+      - name: churn_reason
+        description: Stated churn reason; null while active.
+      - name: country
+        description: Customer country.
+      - name: is_churned
+        description: True if the customer has churned.
