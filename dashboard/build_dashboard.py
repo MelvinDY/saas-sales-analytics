@@ -105,7 +105,7 @@ def fetch(con):
     nrr_by_tier = series_by_key(
         [(r[0], r[1], r[3]) for r in plan_rows], months, TIERS, 1, 2)
 
-    clv = {r[0]: [r[1], r[2]] for r in con.sql("""
+    clv_rows = {r[0]: [r[1], r[2]] for r in con.sql("""
         select plan_tier,
                sum(avg_realized_clv * churned_customers)
                    / nullif(sum(churned_customers), 0)  as realized,
@@ -114,6 +114,9 @@ def fetch(con):
                    then predictive_clv end)             as predictive
         from mart_plan_performance group by 1
     """).fetchall()}
+    # keyed in TIERS order so the JSON payload is byte-stable across runs and
+    # the chart's table view lists tiers in the same order as its bars
+    clv = {t: clv_rows[t] for t in TIERS if t in clv_rows}
 
     latest = months[-1]
     prev = months[-2]
